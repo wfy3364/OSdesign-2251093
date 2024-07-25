@@ -110,3 +110,8 @@ sysinfo:
  li a7, SYS_sysinfo
  ecall
  ret
+.global trace
+trace:
+ li a7, SYS_trace
+ ecall
+ ret
