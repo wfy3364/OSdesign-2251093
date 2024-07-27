@@ -449,3 +449,34 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return -1;
   }
 }
+
+int pageDeep = 0;
+
+void vmprint(pagetable_t pagetable){ // new!
+  if (pageDeep == 0){
+    printf("page table %p\n", pagetable);
+    pageDeep = 1;
+  }
+  for(int i = 0; i < 512; i++){
+    pte_t pte = pagetable[i];
+    if(pte & PTE_V){ //current page
+      for(int i = 0; i < pageDeep; i++)
+        printf("..");
+      printf("%d: pte %p pa %p\n", i, pte, PTE2PA(pte));
+    }
+    if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){ //search child pages
+      // this PTE points to a lower-level page table.
+      pageDeep++;
+      uint64 child = PTE2PA(pte);
+      vmprint((pagetable_t)child); //recursive in child
+      pageDeep--;
+    }
+  }
+
+}
+
+
+
+
+
+
