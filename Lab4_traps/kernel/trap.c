@@ -78,7 +78,18 @@ usertrap(void)
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2)
+  {
+    struct proc *p1 = myproc();
+    p1->passed_ticks++;
+    if(p1->passed_ticks == p1->alarm_interval && p1->isreturn) //call alarm() function
+    {
+      p1->isreturn = 0;
+      p1->passed_ticks = 0;
+      p1->save = *p1->trapframe;
+      p1->trapframe->epc = p1->handler_pointer; //go to periodic
+    }
     yield();
+  }
 
   usertrapret();
 }
