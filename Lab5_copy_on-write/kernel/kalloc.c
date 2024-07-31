@@ -9,6 +9,9 @@
 #include "riscv.h"
 #include "defs.h"
 
+int referenceCount[PHYSTOP/PGSIZE]; //new!
+
+
 void freerange(void *pa_start, void *pa_end);
 
 extern char end[]; // first address after kernel.
@@ -23,6 +26,16 @@ struct {
   struct run *freelist;
 } kmem;
 
+void addrefcount(uint64 pa)
+{
+  if (pa >= PHYSTOP) {
+    panic("addref: pa too big");
+  }
+  acquire(&kmem.lock);
+  referenceCount[pa/PGSIZE]++;
+  release(&kmem.lock);
+}
+
 void
 kinit()
 {
@@ -35,8 +48,10 @@ freerange(void *pa_start, void *pa_end)
 {
   char *p;
   p = (char*)PGROUNDUP((uint64)pa_start);
-  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
+  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE){
+    referenceCount[(uint64)p/PGSIZE] = 1; //newnew!
     kfree(p);
+  }
 }
 
 // Free the page of physical memory pointed at by pa,
@@ -50,6 +65,17 @@ kfree(void *pa)
 
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
+
+  acquire(&kmem.lock);
+  referenceCount[(uint64)pa/PGSIZE]--; // new!
+  release(&kmem.lock);
+  if(referenceCount[(uint64)pa/PGSIZE] > 0) // new!
+    return;
+
+  //if (decrefcnt((uint64) pa)) {
+    //return;
+  //}
+
 
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
@@ -72,11 +98,14 @@ kalloc(void)
 
   acquire(&kmem.lock);
   r = kmem.freelist;
-  if(r)
+  if(r){
     kmem.freelist = r->next;
+  }
   release(&kmem.lock);
 
-  if(r)
+  if(r){
     memset((char*)r, 5, PGSIZE); // fill with junk
+    referenceCount[(uint64)r/PGSIZE] = 1; //newnew!
+  }
   return (void*)r;
 }
