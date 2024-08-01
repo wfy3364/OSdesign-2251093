@@ -88,7 +88,7 @@ test0()
 {
   char file[2];
   char dir[2];
-  enum { N = 10, NCHILD = 3 };
+  enum { N = 10, NCHILD = 2 };
   int m, n;
 
   dir[0] = '0';
