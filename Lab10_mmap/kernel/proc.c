@@ -5,6 +5,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "fcntl.h"
 
 struct cpu cpus[NCPU];
 
@@ -312,11 +313,22 @@ fork(void)
 
   pid = np->pid;
 
+  for (int i = 0; i < MAXVMA; ++i) {
+    if(p->vma[i].addr){
+      memmove(&np->vma[i], &p->vma[i], sizeof(p->vma[i]));
+      //np->vma[i]=p->vma[i];
+      filedup(np->vma[i].file);
+      for(uint64 j = np->vma[i].addr;j < np->vma[i].addr + np->vma[i].len;j += PGSIZE)
+        mappages(np->pagetable, j, PGSIZE, 0, PTE_U);
+    }
+  }
+
   release(&np->lock);
 
   acquire(&wait_lock);
   np->parent = p;
   release(&wait_lock);
+
 
   acquire(&np->lock);
   np->state = RUNNABLE;
@@ -357,6 +369,30 @@ exit(int status)
       struct file *f = p->ofile[fd];
       fileclose(f);
       p->ofile[fd] = 0;
+    }
+  }
+
+  /*for(uint64 i = addr;i < addr + len;i += PGSIZE){
+    if(vma->flags & MAP_SHARED)
+      filewrite(vma->file, i, PGSIZE);
+    uvmunmap(p->pagetable, i, 1, 0);
+  }*/
+
+  for(int j = 0; j < MAXVMA;j++)
+  {
+    if(p->vma[j].addr)
+    {
+      for(uint64 i = p->vma[j].addr;i < p->vma[j].addr + p->vma[j].len;i += PGSIZE){
+        pte_t *addr1 = walk(p->pagetable, i, 0);
+        if(PTE2PA(*addr1) != 0){
+          if(p->vma[j].flags & MAP_SHARED)
+            filewrite(p->vma[j].file, i, PGSIZE);
+          kfree((void*)(PTE2PA(*addr1)));
+        }
+        uvmunmap(p->pagetable, i, 1, 0);
+      }
+      p->vma[j].addr = 0;
+      fileclose(p->vma[j].file);
     }
   }
 

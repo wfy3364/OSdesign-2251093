@@ -570,7 +570,6 @@ uint64 sys_munmap(void){
   argint(1, &len);
   struct vmarea *vma = 0;
   int i;
-  //printf("0\n");
   for(i = 0;i < MAXVMA;i++)
   {
     if(p->vma[i].addr && addr >= p->vma[i].addr && addr < p->vma[i].addr + p->vma[i].len)

@@ -1,3 +1,5 @@
+#define MAXVMA 16
+
 // Saved registers for kernel context switches.
 struct context {
   uint64 ra;
@@ -81,6 +83,20 @@ struct trapframe {
 
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
+
+
+
+struct vmarea { // new!
+    uint64 addr;
+    int len;
+    int prot;
+    int flags;
+    int offset;
+    int fd;
+    struct file* file;
+};
+
+
 // Per-process state
 struct proc {
   struct spinlock lock;
@@ -104,4 +120,6 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  struct vmarea vma[MAXVMA];      // new!
 };

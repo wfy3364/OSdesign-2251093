@@ -65,7 +65,55 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if((which_dev = devintr()) != 0){
+  }
+  else if(r_scause() == 13 || r_scause() == 15){
+    uint64 va = r_stval();
+    va = PGROUNDDOWN(va);
+    if(pagehandler(va)<0)
+      setkilled(p);
+    /*if (va >= MAXVA)
+      setkilled(p);
+    struct vmarea *vma = 0;
+    int i;
+    for (i = 0; i < MAXVMA; ++i) {
+      if (!p->vma[i].addr) {
+        vma = &p->vma[i];
+        break;
+      }
+    }
+    if(i == 16)
+      setkilled(p);
+    pte_t *pte = walk(p->pagetable, va, 0);
+    if (pte == 0)
+      setkilled(p);
+    char *mem;
+    if ((mem = kalloc()) == 0) {
+      setkilled(p);
+    }
+    uint64 pa = PTE2PA(*pte);
+    uint64 flags = PTE_FLAGS(*pte);
+    printf("usertrap0.5\n");
+    //memmove((char*)mem, (char*)pa, PGSIZE);
+    printf("usertrap1\n");
+    ilock(vma->file->ip);
+    if (readi(vma->file->ip, 0, (uint64)pa, vma->offset, PGSIZE) < 0) {
+      iunlock(vma->file->ip);
+      setkilled(p);
+    }
+    iunlock(vma->file->ip);
+    if ((vma->prot & PROT_READ)) {
+      flags |= PTE_R;
+    }
+    if ((vma->prot & PROT_WRITE)) {
+      flags |= PTE_W;
+    }
+    if ((vma->prot & PROT_EXEC)) {
+      flags |= PTE_X;
+    }
+    mappages(p->pagetable, va, PGSIZE, (uint64) pa, flags);
+    printf("usertrap2\n");*/
+  }
+  else if((which_dev = devintr()) != 0){
     // ok
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
